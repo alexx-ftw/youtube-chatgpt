@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube: abrir vídeo en ChatGPT
 // @namespace    eros.youtube.chatgpt
-// @version      1.0.1
+// @version      1.0.2
 // @description  Añade un botón que abre ChatGPT con la URL del vídeo en el parámetro q.
 // @homepageURL  https://github.com/alexx-ftw/youtube-chatgpt
 // @supportURL   https://github.com/alexx-ftw/youtube-chatgpt/issues
@@ -19,6 +19,7 @@
 
   const CARD = 'ytd-rich-item-renderer';
   const BUTTON = 'yt-chatgpt-open';
+  const INLINE_HOST = 'yt-chatgpt-inline-metadata';
   const STYLE_ID = 'yt-chatgpt-open-style';
   const VIDEO_LINKS = [
     'a.ytLockupMetadataViewModelTitle[href]',
@@ -33,7 +34,24 @@
   const style = document.createElement('style');
   style.id = STYLE_ID;
   style.textContent = `
+    .${INLINE_HOST} {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) max-content;
+      column-gap: 8px;
+      align-items: start;
+      min-width: 0;
+    }
+    .${INLINE_HOST} > * {
+      grid-column: 1;
+      min-width: 0;
+    }
+    .${INLINE_HOST} > h3 {
+      grid-column: 1 / -1;
+      grid-row: 1;
+    }
     a.${BUTTON} {
+      grid-column: 2;
+      grid-row: 2;
       display: inline-flex;
       align-items: center;
       align-self: flex-start;
@@ -41,9 +59,9 @@
       box-sizing: border-box;
       width: max-content;
       max-width: 100%;
-      min-height: 30px;
-      margin-top: 8px;
-      padding: 6px 11px;
+      min-height: 22px;
+      margin: 0;
+      padding: 2px 8px;
       border: 1px solid var(--yt-spec-10-percent-layer, #ddd);
       border-radius: 999px;
       background: var(--yt-spec-badge-chip-background, #f2f2f2);
@@ -88,11 +106,20 @@
     if (!card.isConnected) return;
     let link = card.querySelector(`a.${BUTTON}`);
     const videoURL = getVideoURL(card);
-    const container = card.querySelector('.ytLockupMetadataViewModelTextContainer')
-      || card.querySelector('#meta')
-      || card.querySelector('#details');
+    // Conserva el título a todo el ancho y comparte la fila de metadatos.
+    const container = [
+      card.querySelector('.ytLockupMetadataViewModelTextContainer'),
+      card.querySelector('#meta'),
+      card.querySelector('#details'),
+    ].find((node) => node?.querySelector(':scope > h3') && node.querySelector(
+      ':scope > .ytLockupMetadataViewModelMetadata, :scope > ytd-video-meta-block, '
+      + ':scope > #metadata, :scope > #metadata-line'
+    ));
 
     if (!videoURL || !container) {
+      card.querySelectorAll(`.${INLINE_HOST}`).forEach((node) => {
+        node.classList.remove(INLINE_HOST);
+      });
       link?.remove();
       return;
     }
@@ -114,6 +141,7 @@
           setDestination(link, currentURL);
         } else {
           event.preventDefault();
+          link.parentElement?.classList.remove(INLINE_HOST);
           link.remove();
         }
       };
@@ -123,7 +151,11 @@
     }
 
     setDestination(link, videoURL);
-    if (link.parentElement !== container) container.append(link);
+    if (link.parentElement !== container) {
+      link.parentElement?.classList.remove(INLINE_HOST);
+      container.append(link);
+    }
+    container.classList.add(INLINE_HOST);
   }
 
   const pending = new Set();
