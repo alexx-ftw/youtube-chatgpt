@@ -10,7 +10,7 @@ Necesitas Tampermonkey o Violentmonkey.
 
 1. Abre el enlace de instalación y confirma la instalación o actualización en tu gestor de userscripts.
 2. Recarga YouTube.
-3. Pulsa **ChatGPT ↗** debajo del título y los datos de una tarjeta.
+3. Pulsa **ChatGPT ↗** a la derecha de los datos del vídeo, en la misma fila.
 
 Si el navegador muestra el código, cópialo en un script nuevo de tu gestor y guárdalo.
 
@@ -19,6 +19,7 @@ Si el navegador muestra el código, cópialo en un script nuevo de tu gestor y g
 - Abre `https://chatgpt.com/?q=URL_DEL_VIDEO`, con la URL codificada correctamente.
 - Envía como valor de `q` la URL canónica `https://www.youtube.com/watch?v=ID`.
 - Añade el botón a las tarjetas `ytd-rich-item-renderer` con el diseño moderno de YouTube y algunos diseños anteriores.
+- Sitúa el botón compacto en la misma fila que los metadatos y conserva todo el ancho del título.
 - Detecta los vídeos que se cargan al hacer scroll, las tarjetas reutilizadas y la navegación interna de YouTube.
 - Toma los colores del tema de YouTube y mantiene el comportamiento habitual de los enlaces al abrir pestañas.
 
@@ -37,6 +38,11 @@ Para publicar una actualización:
 Documentación: [Tampermonkey](https://www.tampermonkey.net/documentation.php#meta:updateURL) · [Violentmonkey](https://violentmonkey.github.io/api/metadata-block/)
 
 ## Historial
+
+### 1.0.2
+
+- Botón compacto junto a los metadatos del vídeo, sin una fila adicional para el botón.
+- El título conserva todo su ancho y las tarjetas reutilizadas recuperan su diseño original cuando el botón deja de corresponder.
 
 ### 1.0.1
 
