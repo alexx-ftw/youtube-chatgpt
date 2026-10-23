@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         YouTube: abrir vídeo en ChatGPT
 // @namespace    eros.youtube.chatgpt
-// @version      1.0.2
-// @description  Añade un botón que abre ChatGPT con la URL del vídeo en el parámetro q.
+// @version      1.0.3
+// @description  Añade un botón que abre ChatGPT con «Resume» seguido de la URL del vídeo.
 // @homepageURL  https://github.com/alexx-ftw/youtube-chatgpt
 // @supportURL   https://github.com/alexx-ftw/youtube-chatgpt/issues
 // @updateURL    https://raw.githubusercontent.com/alexx-ftw/youtube-chatgpt/main/youtube-chatgpt.user.js
@@ -98,7 +98,8 @@
   }
 
   function setDestination(link, videoURL) {
-    const destination = `https://chatgpt.com/?q=${encodeURIComponent(videoURL)}`;
+    const prompt = `Resume ${videoURL}`;
+    const destination = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
     if (link.getAttribute('href') !== destination) link.href = destination;
   }
 
@@ -130,7 +131,7 @@
       link.textContent = 'ChatGPT ↗';
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
-      link.title = 'Abrir URL del vídeo en ChatGPT (nueva pestaña)';
+      link.title = 'Resumir vídeo en ChatGPT (nueva pestaña)';
       link.setAttribute('aria-label', link.title);
 
       // Lee la URL actual también al pulsar, por si YouTube recicla la tarjeta.
