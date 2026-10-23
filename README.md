@@ -1,6 +1,6 @@
 # YouTube → ChatGPT
 
-Userscript que añade un botón **ChatGPT ↗** a las tarjetas de vídeo de YouTube. Al pulsarlo, abre una nueva pestaña con la URL del vídeo en el parámetro `q` de ChatGPT.
+Userscript que añade un botón **ChatGPT ↗** a las tarjetas de vídeo de YouTube. Al pulsarlo, abre una nueva pestaña de ChatGPT con el texto `Resume URL_DEL_VIDEO` en el parámetro `q`.
 
 ## Instalación
 
@@ -16,8 +16,8 @@ Si el navegador muestra el código, cópialo en un script nuevo de tu gestor y g
 
 ## Funcionamiento
 
-- Abre `https://chatgpt.com/?q=URL_DEL_VIDEO`, con la URL codificada correctamente.
-- Envía como valor de `q` la URL canónica `https://www.youtube.com/watch?v=ID`.
+- Abre `https://chatgpt.com/?q=Resume%20URL_DEL_VIDEO`, con todo el texto codificado correctamente.
+- Envía como valor de `q` el texto `Resume https://www.youtube.com/watch?v=ID`, usando la URL canónica del vídeo.
 - Añade el botón a las tarjetas `ytd-rich-item-renderer` con el diseño moderno de YouTube y algunos diseños anteriores.
 - Sitúa el botón compacto en la misma fila que los metadatos y conserva todo el ancho del título.
 - Detecta los vídeos que se cargan al hacer scroll, las tarjetas reutilizadas y la navegación interna de YouTube.
@@ -38,6 +38,11 @@ Para publicar una actualización:
 Documentación: [Tampermonkey](https://www.tampermonkey.net/documentation.php#meta:updateURL) · [Violentmonkey](https://violentmonkey.github.io/api/metadata-block/)
 
 ## Historial
+
+### 1.0.3
+
+- Añade `Resume ` delante de la URL del vídeo al abrir ChatGPT.
+- Actualiza el texto de ayuda del botón para indicar que solicita un resumen.
 
 ### 1.0.2
 
