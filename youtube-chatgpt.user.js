@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube: abrir vídeo en ChatGPT
 // @namespace    eros.youtube.chatgpt
-// @version      1.0.4
+// @version      1.0.5
 // @description  Botón ChatGPT en tarjetas y junto a Compartir: abre «Resume» seguido de la URL del vídeo.
 // @homepageURL  https://github.com/alexx-ftw/youtube-chatgpt
 // @supportURL   https://github.com/alexx-ftw/youtube-chatgpt/issues
@@ -91,6 +91,29 @@
       margin-inline-start: 8px;
       padding: 0 12px;
       font-size: 14px;
+    }
+    /* Comparte una sola fila con las acciones nativas y otros userscripts. */
+    #actions.ytd-watch-metadata:has(a.${WATCH_BUTTON}) {
+      min-width: 0 !important;
+      max-width: 100%;
+    }
+    #actions.ytd-watch-metadata #actions-inner:has(a.${WATCH_BUTTON}) {
+      display: flex !important;
+      flex-flow: row nowrap !important;
+      align-items: center;
+      justify-content: flex-start !important;
+      gap: 8px;
+      min-width: 0;
+      max-width: 100%;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+    #actions.ytd-watch-metadata #actions-inner:has(a.${WATCH_BUTTON}) > * {
+      flex: 0 0 auto !important;
+    }
+    #actions.ytd-watch-metadata #actions-inner:has(a.${WATCH_BUTTON}) > #menu {
+      min-width: max-content !important;
+      max-width: none !important;
     }
   `;
   (document.head || document.documentElement).append(style);
