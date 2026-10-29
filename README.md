@@ -1,6 +1,6 @@
 # YouTube → ChatGPT
 
-Userscript que añade un botón **ChatGPT ↗** a las tarjetas de vídeo de YouTube. Al pulsarlo, abre una nueva pestaña de ChatGPT con el texto `Resume URL_DEL_VIDEO` en el parámetro `q`.
+Userscript que añade un botón **ChatGPT ↗** a las tarjetas de vídeo de YouTube y a la barra de acciones del vídeo abierto. Al pulsarlo, abre una nueva pestaña de ChatGPT con el texto `Resume URL_DEL_VIDEO` en el parámetro `q`.
 
 ## Instalación
 
@@ -10,7 +10,7 @@ Necesitas Tampermonkey o Violentmonkey.
 
 1. Abre el enlace de instalación y confirma la instalación o actualización en tu gestor de userscripts.
 2. Recarga YouTube.
-3. Pulsa **ChatGPT ↗** a la derecha de los datos del vídeo, en la misma fila.
+3. Pulsa **ChatGPT ↗** junto a los datos de una tarjeta o en la barra de acciones del vídeo abierto, junto a **Compartir**.
 
 Si el navegador muestra el código, cópialo en un script nuevo de tu gestor y guárdalo.
 
@@ -18,9 +18,12 @@ Si el navegador muestra el código, cópialo en un script nuevo de tu gestor y g
 
 - Abre `https://chatgpt.com/?q=Resume%20URL_DEL_VIDEO`, con todo el texto codificado correctamente.
 - Envía como valor de `q` el texto `Resume https://www.youtube.com/watch?v=ID`, usando la URL canónica del vídeo.
-- Añade el botón a las tarjetas `ytd-rich-item-renderer` con el diseño moderno de YouTube y algunos diseños anteriores.
+- Añade el botón a las tarjetas `ytd-rich-item-renderer` y a los `yt-lockup-view-model` independientes, incluidas las recomendaciones horizontales y compactas.
 - Sitúa el botón compacto en la misma fila que los metadatos y conserva todo el ancho del título.
+- En la página del vídeo, añade la acción a la misma barra que **Me gusta** y **Compartir**.
+- Usa la URL de cada tarjeta para sus botones y la URL actual de la página para la acción del vídeo abierto.
 - Detecta los vídeos que se cargan al hacer scroll, las tarjetas reutilizadas y la navegación interna de YouTube.
+- Evita duplicar el botón cuando un lockup está dentro de una tarjeta rich o cuando YouTube reconstruye la barra de acciones.
 - Toma los colores del tema de YouTube y mantiene el comportamiento habitual de los enlaces al abrir pestañas.
 
 ## Actualizaciones automáticas
@@ -38,6 +41,13 @@ Para publicar una actualización:
 Documentación: [Tampermonkey](https://www.tampermonkey.net/documentation.php#meta:updateURL) · [Violentmonkey](https://violentmonkey.github.io/api/metadata-block/)
 
 ## Historial
+
+### 1.0.4
+
+- Soporte para tarjetas horizontales y compactas `yt-lockup-view-model` que no están dentro de un `ytd-rich-item-renderer`.
+- Botón en la barra de acciones del vídeo abierto, junto a **Compartir**.
+- Actualización de la URL al cambiar de vídeo mediante la navegación interna o el historial.
+- Un solo botón por tarjeta y por barra de acciones.
 
 ### 1.0.3
 
@@ -58,3 +68,4 @@ Documentación: [Tampermonkey](https://www.tampermonkey.net/documentation.php#me
 ### 1.0.0
 
 - Versión inicial: botón en las tarjetas y apertura de ChatGPT con la URL del vídeo.
+
