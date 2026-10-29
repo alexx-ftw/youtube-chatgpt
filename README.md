@@ -21,6 +21,7 @@ Si el navegador muestra el código, cópialo en un script nuevo de tu gestor y g
 - Añade el botón a las tarjetas `ytd-rich-item-renderer` y a los `yt-lockup-view-model` independientes, incluidas las recomendaciones horizontales y compactas.
 - Sitúa el botón compacto en la misma fila que los metadatos y conserva todo el ancho del título.
 - En la página del vídeo, añade la acción a la misma barra que **Me gusta** y **Compartir**.
+- Mantiene la barra de acciones en una sola fila, también con el botón de copiar transcripción. Si los controles no caben, permite desplazarlos horizontalmente.
 - Usa la URL de cada tarjeta para sus botones y la URL actual de la página para la acción del vídeo abierto.
 - Detecta los vídeos que se cargan al hacer scroll, las tarjetas reutilizadas y la navegación interna de YouTube.
 - Evita duplicar el botón cuando un lockup está dentro de una tarjeta rich o cuando YouTube reconstruye la barra de acciones.
@@ -41,6 +42,12 @@ Para publicar una actualización:
 Documentación: [Tampermonkey](https://www.tampermonkey.net/documentation.php#meta:updateURL) · [Violentmonkey](https://violentmonkey.github.io/api/metadata-block/)
 
 ## Historial
+
+### 1.0.5
+
+- Evita que el botón de copiar transcripción baje a una segunda fila al añadir ChatGPT a la barra de acciones.
+- Mantiene todos los controles accesibles mediante desplazamiento horizontal cuando falta espacio.
+- Aplica el ajuste únicamente a la barra que contiene el botón de ChatGPT.
 
 ### 1.0.4
 
