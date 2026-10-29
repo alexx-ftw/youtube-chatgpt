@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         YouTube: abrir vídeo en ChatGPT
 // @namespace    eros.youtube.chatgpt
-// @version      1.0.3
-// @description  Añade un botón que abre ChatGPT con «Resume» seguido de la URL del vídeo.
+// @version      1.0.4
+// @description  Botón ChatGPT en tarjetas y junto a Compartir: abre «Resume» seguido de la URL del vídeo.
 // @homepageURL  https://github.com/alexx-ftw/youtube-chatgpt
 // @supportURL   https://github.com/alexx-ftw/youtube-chatgpt/issues
 // @updateURL    https://raw.githubusercontent.com/alexx-ftw/youtube-chatgpt/main/youtube-chatgpt.user.js
@@ -17,8 +17,12 @@
 (() => {
   'use strict';
 
-  const CARD = 'ytd-rich-item-renderer';
+  const CARD = 'ytd-rich-item-renderer, yt-lockup-view-model';
   const BUTTON = 'yt-chatgpt-open';
+  const WATCH_BUTTON = 'yt-chatgpt-watch-action';
+  const WATCH_ROOT = 'ytd-watch-metadata, #actions.ytd-watch-metadata';
+  const WATCH_ACTIONS = 'ytd-watch-metadata #actions #top-level-buttons-computed, '
+    + '#actions.ytd-watch-metadata #top-level-buttons-computed';
   const INLINE_HOST = 'yt-chatgpt-inline-metadata';
   const STYLE_ID = 'yt-chatgpt-open-style';
   const VIDEO_LINKS = [
@@ -78,23 +82,51 @@
       outline: 2px solid var(--yt-spec-call-to-action, #065fd4);
       outline-offset: 3px;
     }
+    a.${BUTTON}.${WATCH_BUTTON} {
+      grid-column: auto;
+      grid-row: auto;
+      align-self: center;
+      flex: 0 0 auto;
+      min-height: 36px;
+      margin-inline-start: 8px;
+      padding: 0 12px;
+      font-size: 14px;
+    }
   `;
   (document.head || document.documentElement).append(style);
 
+  // Un lockup dentro de una tarjeta rich comparte su mismo botón.
+  function getCardRoot(node) {
+    if (!(node instanceof Element)) return null;
+    const card = node.closest(CARD);
+    return card?.closest('ytd-rich-item-renderer') || card;
+  }
+
+  function canonicalVideoURL(value) {
+    if (!value) return null;
+    try {
+      const url = new URL(value, location.origin);
+      if (!['www.youtube.com', 'youtube.com', 'm.youtube.com'].includes(url.hostname)) return null;
+      const id = url.pathname === '/watch' ? url.searchParams.get('v') : null;
+      if (id && /^[A-Za-z0-9_-]{11}$/.test(id)) {
+        return `https://www.youtube.com/watch?v=${id}`;
+      }
+    } catch { /* Ignora enlaces incompletos mientras se carga la página. */ }
+    return null;
+  }
+
   function getVideoURL(card) {
+    if (!card) return null;
     for (const selector of VIDEO_LINKS) {
       const source = card.querySelector(selector);
-      if (!source) continue;
-      try {
-        const url = new URL(source.getAttribute('href'), location.origin);
-        if (!['www.youtube.com', 'youtube.com', 'm.youtube.com'].includes(url.hostname)) continue;
-        const id = url.pathname === '/watch' ? url.searchParams.get('v') : null;
-        if (id && /^[A-Za-z0-9_-]{11}$/.test(id)) {
-          return `https://www.youtube.com/watch?v=${id}`;
-        }
-      } catch { /* Ignora enlaces incompletos mientras se carga la tarjeta. */ }
+      const videoURL = canonicalVideoURL(source?.getAttribute('href'));
+      if (videoURL) return videoURL;
     }
     return null;
+  }
+
+  function getCurrentVideoURL() {
+    return canonicalVideoURL(location.href);
   }
 
   function setDestination(link, videoURL) {
@@ -103,9 +135,43 @@
     if (link.getAttribute('href') !== destination) link.href = destination;
   }
 
+  function removeLink(link) {
+    link.parentElement?.classList.remove(INLINE_HOST);
+    link.remove();
+  }
+
+  function createLink(isWatch = false) {
+    const link = document.createElement('a');
+    link.className = BUTTON;
+    if (isWatch) link.classList.add(WATCH_BUTTON);
+    link.textContent = 'ChatGPT ↗';
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.title = 'Resumir vídeo en ChatGPT (nueva pestaña)';
+    link.setAttribute('aria-label', link.title);
+
+    // Relee la URL al pulsar: la tarjeta o la página pueden cambiar de vídeo.
+    const refresh = (event) => {
+      event.stopPropagation();
+      const videoURL = isWatch
+        ? getCurrentVideoURL()
+        : getVideoURL(getCardRoot(link));
+      if (videoURL) {
+        setDestination(link, videoURL);
+      } else {
+        event.preventDefault();
+        removeLink(link);
+      }
+    };
+    for (const type of ['pointerdown', 'click', 'auxclick', 'contextmenu']) {
+      link.addEventListener(type, refresh);
+    }
+    return link;
+  }
+
   function updateCard(card) {
     if (!card.isConnected) return;
-    let link = card.querySelector(`a.${BUTTON}`);
+    let link = card.querySelector(`a.${BUTTON}:not(.${WATCH_BUTTON})`);
     const videoURL = getVideoURL(card);
     // Conserva el título a todo el ancho y comparte la fila de metadatos.
     const container = [
@@ -125,31 +191,7 @@
       return;
     }
 
-    if (!link) {
-      link = document.createElement('a');
-      link.className = BUTTON;
-      link.textContent = 'ChatGPT ↗';
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      link.title = 'Resumir vídeo en ChatGPT (nueva pestaña)';
-      link.setAttribute('aria-label', link.title);
-
-      // Lee la URL actual también al pulsar, por si YouTube recicla la tarjeta.
-      const refresh = (event) => {
-        event.stopPropagation();
-        const currentURL = getVideoURL(card);
-        if (currentURL) {
-          setDestination(link, currentURL);
-        } else {
-          event.preventDefault();
-          link.parentElement?.classList.remove(INLINE_HOST);
-          link.remove();
-        }
-      };
-      for (const type of ['pointerdown', 'click', 'auxclick', 'contextmenu']) {
-        link.addEventListener(type, refresh);
-      }
-    }
+    if (!link) link = createLink();
 
     setDestination(link, videoURL);
     if (link.parentElement !== container) {
@@ -159,27 +201,61 @@
     container.classList.add(INLINE_HOST);
   }
 
+  function updateWatchButton() {
+    const videoURL = getCurrentVideoURL();
+    const container = [...document.querySelectorAll(WATCH_ACTIONS)]
+      .find((node) => !node.closest('[hidden]'));
+    const links = [...document.querySelectorAll(`a.${WATCH_BUTTON}`)];
+
+    if (!videoURL || !container) {
+      links.forEach(removeLink);
+      return;
+    }
+
+    // Solo una acción, incluso si YouTube conserva barras antiguas en el DOM.
+    const link = links.find((node) => node.parentElement === container)
+      || links[0] || createLink(true);
+    links.filter((node) => node !== link).forEach(removeLink);
+    setDestination(link, videoURL);
+    if (link.parentElement !== container) container.append(link);
+  }
+
   const pending = new Set();
+  let pendingWatch = false;
   let scheduled = false;
 
-  function queue(card) {
-    if (!card || !card.isConnected) return;
-    pending.add(card);
+  function schedule() {
     if (scheduled) return;
     scheduled = true;
     requestAnimationFrame(() => {
       scheduled = false;
       const cards = [...pending];
+      const refreshWatch = pendingWatch;
       pending.clear();
+      pendingWatch = false;
       cards.forEach(updateCard);
+      if (refreshWatch) updateWatchButton();
     });
+  }
+
+  function queue(node) {
+    const card = getCardRoot(node);
+    if (!card || !card.isConnected) return;
+    pending.add(card);
+    schedule();
+  }
+
+  function queueWatch() {
+    pendingWatch = true;
+    schedule();
   }
 
   function collect(node) {
     if (!(node instanceof Element) || node.closest(`a.${BUTTON}`)) return;
-    const card = node.closest(CARD);
+    const card = getCardRoot(node);
     if (card) queue(card);
     else node.querySelectorAll(CARD).forEach(queue);
+    if (node.closest(WATCH_ROOT) || node.querySelector(WATCH_ROOT)) queueWatch();
   }
 
   // Procesa las tarjetas afectadas, sin sondeos periódicos de toda la página.
@@ -187,7 +263,11 @@
     for (const mutation of mutations) {
       const target = mutation.target;
       if (!(target instanceof Element) || target.closest(`a.${BUTTON}`)) continue;
-      queue(target.closest(CARD));
+      queue(target);
+      if (target.closest(WATCH_ROOT)
+        || (mutation.attributeName === 'hidden' && target.querySelector(WATCH_ROOT))) {
+        queueWatch();
+      }
       for (const node of mutation.addedNodes) collect(node);
     }
   });
@@ -195,10 +275,16 @@
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ['href'],
+    attributeFilter: ['href', 'hidden'],
   });
 
-  const scan = () => document.querySelectorAll(CARD).forEach(queue);
+  const scan = () => {
+    document.querySelectorAll(CARD).forEach(queue);
+    queueWatch();
+  };
   document.addEventListener('yt-navigate-finish', scan);
+  document.addEventListener('yt-page-data-updated', queueWatch);
+  window.addEventListener('popstate', queueWatch);
   scan();
 })();
+
