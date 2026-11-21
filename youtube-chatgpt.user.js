@@ -1,21 +1,122 @@
 // ==UserScript==
 // @name         YouTube: abrir vídeo en ChatGPT
 // @namespace    eros.youtube.chatgpt
-// @version      1.0.5
-// @description  Botón ChatGPT en tarjetas y junto a Compartir: abre «Resume» seguido de la URL del vídeo.
+// @version      1.1.0
+// @description  Abre ChatGPT con «Resume URL» y el vídeo en otra pestaña silenciada.
 // @homepageURL  https://github.com/alexx-ftw/youtube-chatgpt
 // @supportURL   https://github.com/alexx-ftw/youtube-chatgpt/issues
 // @updateURL    https://raw.githubusercontent.com/alexx-ftw/youtube-chatgpt/main/youtube-chatgpt.user.js
 // @downloadURL  https://raw.githubusercontent.com/alexx-ftw/youtube-chatgpt/main/youtube-chatgpt.user.js
 // @match        https://www.youtube.com/*
 // @match        https://youtube.com/*
-// @run-at       document-idle
-// @grant        none
+// @run-at       document-start
+// @grant        GM_openInTab
+// @grant        GM_audio
 // @noframes
 // ==/UserScript==
 
 (() => {
   'use strict';
+
+  const MUTE_FLAG = 'yt_chatgpt_mute';
+
+  // Se ejecuta antes de esperar al DOM, solo en la pestaña de vídeo recién abierta.
+  startMutedTab();
+
+  function startMutedTab() {
+    const url = new URL(location.href);
+    const videoURL = canonicalVideoURL(url.href);
+    if (!videoURL || url.searchParams.get(MUTE_FLAG) !== '1') return;
+
+    url.searchParams.delete(MUTE_FLAG);
+    try {
+      history.replaceState(history.state, '', url.href);
+    } catch { /* El silenciado sigue funcionando aunque no se pueda limpiar la URL. */ }
+
+    let fallbackStarted = false;
+    const fallback = () => {
+      if (fallbackStarted || canonicalVideoURL(location.href) !== videoURL) return;
+      fallbackStarted = true;
+      startPlayerMuteFallback(videoURL);
+    };
+
+    try {
+      if (typeof GM_audio !== 'undefined' && typeof GM_audio.setMute === 'function') {
+        const result = GM_audio.setMute({ isMuted: true }, (error) => {
+          if (error) fallback();
+        });
+        result?.catch?.(fallback);
+        return;
+      }
+    } catch { /* Gestores sin soporte de silenciado de pestañas. */ }
+    fallback();
+  }
+
+  // Violentmonkey y otros gestores: silencia el vídeo sin cambiar su volumen.
+  function startPlayerMuteFallback(videoURL) {
+    let active = true;
+    const mediaEvents = ['loadstart', 'play', 'volumechange'];
+    const navigationEvents = ['yt-navigate-finish', 'yt-page-data-updated'];
+    const isSameVideo = () => canonicalVideoURL(location.href) === videoURL;
+
+    function stop() {
+      if (!active) return;
+      active = false;
+      observer.disconnect();
+      mediaEvents.forEach((type) => document.removeEventListener(type, onMedia, true));
+      navigationEvents.forEach((type) => document.removeEventListener(type, onNavigation));
+      document.removeEventListener('pointerdown', onVolumeControl, true);
+      document.removeEventListener('keydown', onVolumeControl, true);
+      window.removeEventListener('popstate', onNavigation);
+    }
+
+    function mute(video) {
+      if (!active) return;
+      if (!isSameVideo()) {
+        stop();
+        return;
+      }
+      if (video instanceof HTMLVideoElement && !video.muted) video.muted = true;
+    }
+
+    function collectVideo(node) {
+      if (!(node instanceof Element)) return;
+      if (node.matches('video')) mute(node);
+      node.querySelectorAll('video').forEach(mute);
+    }
+
+    function onMedia(event) {
+      mute(event.target);
+    }
+
+    function onNavigation() {
+      if (!isSameVideo()) stop();
+    }
+
+    function onVolumeControl(event) {
+      if (!event.isTrusted || !(event.target instanceof Element)) return;
+      const target = event.target;
+      const volumeControl = target.closest('.ytp-mute-button, .ytp-volume-panel');
+      const muteShortcut = event.type === 'keydown' && event.key?.toLowerCase() === 'm'
+        && !event.ctrlKey && !event.metaKey && !event.altKey
+        && !target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"]');
+      // Libera el control antes de que YouTube procese el gesto de desmutear.
+      if (volumeControl || muteShortcut) stop();
+    }
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) collectVideo(node);
+      }
+    });
+    observer.observe(document, { childList: true, subtree: true });
+    mediaEvents.forEach((type) => document.addEventListener(type, onMedia, true));
+    navigationEvents.forEach((type) => document.addEventListener(type, onNavigation));
+    document.addEventListener('pointerdown', onVolumeControl, true);
+    document.addEventListener('keydown', onVolumeControl, true);
+    window.addEventListener('popstate', onNavigation);
+    document.querySelectorAll('video').forEach(mute);
+  }
 
   const CARD = 'ytd-rich-item-renderer, yt-lockup-view-model';
   const BUTTON = 'yt-chatgpt-open';
@@ -32,8 +133,6 @@
     'a#video-title[href]',
     'a#thumbnail[href]',
   ];
-
-  if (document.getElementById(STYLE_ID)) return;
 
   const style = document.createElement('style');
   style.id = STYLE_ID;
@@ -116,8 +215,6 @@
       max-width: none !important;
     }
   `;
-  (document.head || document.documentElement).append(style);
-
   // Un lockup dentro de una tarjeta rich comparte su mismo botón.
   function getCardRoot(node) {
     if (!(node instanceof Element)) return null;
@@ -170,7 +267,7 @@
     link.textContent = 'ChatGPT ↗';
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
-    link.title = 'Resumir vídeo en ChatGPT (nueva pestaña)';
+    link.title = 'Abrir ChatGPT y el vídeo silenciado en nuevas pestañas';
     link.setAttribute('aria-label', link.title);
 
     // Relee la URL al pulsar: la tarjeta o la página pueden cambiar de vídeo.
@@ -185,10 +282,27 @@
         event.preventDefault();
         removeLink(link);
       }
+      return videoURL;
     };
-    for (const type of ['pointerdown', 'click', 'auxclick', 'contextmenu']) {
+    for (const type of ['pointerdown', 'contextmenu']) {
       link.addEventListener(type, refresh);
     }
+
+    const activate = (event) => {
+      const videoURL = refresh(event);
+      const primaryClick = event.type === 'click' && event.button === 0;
+      const middleClick = event.type === 'auxclick' && event.button === 1;
+      if (!videoURL || (!primaryClick && !middleClick)) return;
+
+      event.preventDefault();
+      const mutedURL = new URL(videoURL);
+      mutedURL.searchParams.set(MUTE_FLAG, '1');
+      const background = middleClick || event.ctrlKey || event.metaKey;
+      GM_openInTab(mutedURL.href, { active: false, insert: true });
+      GM_openInTab(link.href, { active: !background, insert: true });
+    };
+    link.addEventListener('click', activate);
+    link.addEventListener('auxclick', activate);
     return link;
   }
 
@@ -294,20 +408,29 @@
       for (const node of mutation.addedNodes) collect(node);
     }
   });
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ['href', 'hidden'],
-  });
-
   const scan = () => {
     document.querySelectorAll(CARD).forEach(queue);
     queueWatch();
   };
-  document.addEventListener('yt-navigate-finish', scan);
-  document.addEventListener('yt-page-data-updated', queueWatch);
-  window.addEventListener('popstate', queueWatch);
-  scan();
+  function startUI() {
+    if (document.getElementById(STYLE_ID)) return;
+    (document.head || document.documentElement).append(style);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['href', 'hidden'],
+    });
+    document.addEventListener('yt-navigate-finish', scan);
+    document.addEventListener('yt-page-data-updated', queueWatch);
+    window.addEventListener('popstate', queueWatch);
+    scan();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startUI, { once: true });
+  } else {
+    startUI();
+  }
 })();
+
 
