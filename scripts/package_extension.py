@@ -10,7 +10,10 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "extension"
-FILES = ("manifest.json", "background.mjs", "groups.mjs", "bridge.js")
+FILES = (
+    "manifest.json", "background.mjs", "groups.mjs", "bridge.js",
+    "playback.js", "playback-session.mjs", "startup.js",
+)
 
 
 def main():

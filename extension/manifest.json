@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "YouTube + ChatGPT: grupos de pestañas",
-  "version": "1.0.1",
-  "description": "Agrupa el vídeo silenciado y su conversación al pulsar el botón del userscript YouTube → ChatGPT.",
+  "version": "1.1.0",
+  "description": "Reproduce el vídeo silenciado y agrupa su pestaña con ChatGPT al pulsar el botón del userscript.",
   "minimum_chrome_version": "120",
-  "permissions": ["tabGroups"],
+  "permissions": ["tabGroups", "storage"],
   "background": {
     "service_worker": "background.mjs",
     "type": "module"
@@ -12,7 +12,7 @@
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*", "https://youtube.com/*"],
-      "js": ["bridge.js"],
+      "js": ["playback.js", "startup.js", "bridge.js"],
       "run_at": "document_start",
       "all_frames": false
     }

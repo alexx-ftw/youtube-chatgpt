@@ -1,5 +1,6 @@
 export const CHANNEL = 'yt-chatgpt-groups';
 export const REQUEST_TYPE = 'OPEN_GROUP';
+export const PLAYBACK_FLAG = 'yt_chatgpt_group_play';
 
 const ORIGINS = new Set(['https://www.youtube.com', 'https://youtube.com']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -51,7 +52,7 @@ async function removeOwnBlankTabs(api, created, navigationStarted) {
   }
 }
 
-async function openGroup(api, request) {
+async function openGroup(api, request, preparePlayback) {
   const created = [];
   const navigationStarted = new Set();
   const createBlank = async () => {
@@ -75,12 +76,22 @@ async function openGroup(api, request) {
     if (!isId(groupId)) throw new Error('El navegador no devolvió el grupo creado.');
     await api.tabGroups.update(groupId, { title: request.title, color: 'blue', collapsed: false });
 
+    await preparePlayback({
+      requestId: request.requestId, videoURL: request.videoURL,
+      videoTabId, chatgptTabId, groupId, windowId: request.windowId,
+      focusChat: !request.background,
+    });
+
     // Mute and grouping are complete before either destination starts loading.
     // Mark navigation before the API call: a rejected update can be ambiguous.
-    navigationStarted.add(videoTabId);
-    await api.tabs.update(videoTabId, { url: request.videoURL });
     navigationStarted.add(chatgptTabId);
-    await api.tabs.update(chatgptTabId, { url: request.chatgptURL, active: !request.background });
+    await api.tabs.update(chatgptTabId, { url: request.chatgptURL, active: false });
+    const playbackURL = new URL(request.videoURL);
+    playbackURL.searchParams.set(PLAYBACK_FLAG, request.requestId);
+    navigationStarted.add(videoTabId);
+    // A normal click shows the muted video until playback is confirmed. The
+    // playback manager then selects ChatGPT; modified clicks stay background.
+    await api.tabs.update(videoTabId, { url: playbackURL.href, active: !request.background });
     return { groupId, videoTabId, chatgptTabId };
   } catch (error) {
     await removeOwnBlankTabs(api, created, navigationStarted);
@@ -88,7 +99,9 @@ async function openGroup(api, request) {
   }
 }
 
-export function createGroupHandler(api, { now = () => Date.now(), ttlMs = 60000, maxRequests = 100 } = {}) {
+export function createGroupHandler(api, {
+  now = () => Date.now(), ttlMs = 60000, maxRequests = 100, preparePlayback = async () => {},
+} = {}) {
   if (!Number.isFinite(ttlMs) || ttlMs < 0 || !Number.isInteger(maxRequests) || maxRequests < 1) {
     throw new Error('Invalid request-cache limits.');
   }
@@ -116,7 +129,7 @@ export function createGroupHandler(api, { now = () => Date.now(), ttlMs = 60000,
         throw new Error('Hay demasiadas solicitudes recientes. Espera un momento antes de abrir otro grupo.');
       }
       const entry = { signature, settled: false, expiresAt: Infinity, promise: null };
-      entry.promise = openGroup(api, request).then(
+      entry.promise = openGroup(api, request, preparePlayback).then(
         (result) => { entry.settled = true; entry.expiresAt = now() + ttlMs; return result; },
         (error) => { entry.settled = true; entry.expiresAt = now() + ttlMs; throw error; },
       );
