@@ -22,10 +22,12 @@ La agrupación nativa requiere el complemento de la carpeta [`extension`](extens
 
 Instalación del complemento en Chrome, Brave o Edge compatibles:
 
-1. [Descarga el ZIP del repositorio](https://github.com/alexx-ftw/youtube-chatgpt/archive/refs/heads/main.zip) y descomprímelo en una carpeta que vayas a conservar.
+1. [Descarga el ZIP específico del complemento 1.0.1](https://raw.githubusercontent.com/alexx-ftw/youtube-chatgpt/main/dist/youtube-chatgpt-grupos-1.0.1.zip) y extrae los archivos en una carpeta que vayas a conservar.
 2. Abre la página de extensiones de tu navegador (`chrome://extensions`, `brave://extensions` o `edge://extensions`) y activa **Modo de desarrollador**.
-3. Pulsa **Cargar descomprimida** y selecciona la carpeta `youtube-chatgpt-main/extension`.
+3. Pulsa **Cargar descomprimida** y selecciona la carpeta que contiene directamente `manifest.json`, `background.mjs`, `groups.mjs` y `bridge.js`.
 4. Actualiza el userscript a la versión **1.2.0** o posterior y recarga YouTube.
+
+Selecciona la carpeta extraída, no el archivo ZIP ni una carpeta superior. Si aparece **Manifest file is missing or unreadable**, abre la carpeta elegida y comprueba que `manifest.json` está directamente dentro. El paquete específico coloca los cuatro archivos en su raíz. El ZIP completo del repositorio también incluye ahora un manifiesto en su carpeta principal.
 
 Al activar el botón, el complemento crea un grupo nuevo en la misma ventana con únicamente la pestaña del vídeo y la de ChatGPT. Usa el título del vídeo como nombre del grupo, silencia la pestaña de YouTube antes de cargarla y selecciona ChatGPT. Ctrl/Cmd + clic y clic central mantienen ambas pestañas en segundo plano.
 
@@ -67,6 +69,12 @@ Documentación: [Tampermonkey](https://www.tampermonkey.net/documentation.php#me
 
 ## Verificación del complemento
 
+Para regenerar el paquete dedicado y el manifiesto de la raíz del repositorio:
+
+```sh
+python3 scripts/package_extension.py
+```
+
 Con Node.js, sin dependencias adicionales:
 
 ```sh
@@ -76,6 +84,12 @@ node --test tests/*.test.mjs
 Las pruebas verifican los mensajes, la autorización por clic, el orden de silenciado y navegación, la agrupación y los casos de error con APIs simuladas. No sustituyen una prueba de la extensión instalada en un navegador real.
 
 ## Historial
+
+### Complemento 1.0.1: instalación
+
+- ZIP dedicado con `manifest.json` y todos los archivos del complemento directamente en la raíz.
+- Manifiesto adicional en la raíz del repositorio para poder cargar también la carpeta del ZIP completo de GitHub.
+- Empaquetado reproducible e instrucciones que identifican la carpeta que debe seleccionarse.
 
 ### 1.2.0
 
