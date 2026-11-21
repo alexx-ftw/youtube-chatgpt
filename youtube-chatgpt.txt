@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         YouTube: abrir vídeo en ChatGPT
 // @namespace    eros.youtube.chatgpt
-// @version      1.1.0
-// @description  Abre ChatGPT con «Resume URL» y el vídeo en otra pestaña silenciada.
+// @version      1.2.0
+// @description  Abre el vídeo silenciado y su resumen en ChatGPT, agrupados si está instalado el complemento.
 // @homepageURL  https://github.com/alexx-ftw/youtube-chatgpt
 // @supportURL   https://github.com/alexx-ftw/youtube-chatgpt/issues
 // @updateURL    https://raw.githubusercontent.com/alexx-ftw/youtube-chatgpt/main/youtube-chatgpt.user.js
@@ -255,6 +255,23 @@
     if (link.getAttribute('href') !== destination) link.href = destination;
   }
 
+  function requestTabGroup(link, videoURL, title) {
+    const requestId = crypto.randomUUID();
+    const requestAttribute = 'data-yt-chatgpt-group-request';
+    const acceptedAttribute = 'data-yt-chatgpt-group-accepted';
+    link.removeAttribute(acceptedAttribute);
+    link.setAttribute(requestAttribute, JSON.stringify({ requestId, videoURL, title }));
+    try {
+      // Atributos de texto para compartir el mensaje entre los entornos aislados.
+      // El complemento solo acepta una solicitud por activación real del usuario.
+      link.dispatchEvent(new Event('yt-chatgpt-open-group', { bubbles: true }));
+      return link.getAttribute(acceptedAttribute) === requestId;
+    } finally {
+      link.removeAttribute(requestAttribute);
+      link.removeAttribute(acceptedAttribute);
+    }
+  }
+
   function removeLink(link) {
     link.parentElement?.classList.remove(INLINE_HOST);
     link.remove();
@@ -267,7 +284,7 @@
     link.textContent = 'ChatGPT ↗';
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
-    link.title = 'Abrir ChatGPT y el vídeo silenciado en nuevas pestañas';
+    link.title = 'Abrir vídeo silenciado y ChatGPT (en un grupo con el complemento instalado)';
     link.setAttribute('aria-label', link.title);
 
     // Relee la URL al pulsar: la tarjeta o la página pueden cambiar de vídeo.
@@ -298,6 +315,12 @@
       const mutedURL = new URL(videoURL);
       mutedURL.searchParams.set(MUTE_FLAG, '1');
       const background = middleClick || event.ctrlKey || event.metaKey;
+      const heading = isWatch
+        ? document.querySelector('ytd-watch-metadata h1')
+        : getCardRoot(link)?.querySelector('h3');
+      const title = (heading?.textContent || 'YouTube + ChatGPT')
+        .replace(/\s+/g, ' ').trim().slice(0, 120);
+      if (requestTabGroup(link, videoURL, title)) return;
       GM_openInTab(mutedURL.href, { active: false, insert: true });
       GM_openInTab(link.href, { active: !background, insert: true });
     };

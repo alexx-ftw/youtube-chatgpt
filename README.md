@@ -1,6 +1,6 @@
 # YouTube → ChatGPT
 
-Userscript que añade un botón **ChatGPT ↗** a las tarjetas de vídeo de YouTube y a la barra de acciones del vídeo abierto. Al pulsarlo, abre ChatGPT con el texto `Resume URL_DEL_VIDEO` en el parámetro `q` y el vídeo en otra pestaña silenciada.
+Userscript que añade un botón **ChatGPT ↗** a las tarjetas de vídeo de YouTube y a la barra de acciones del vídeo abierto. Al pulsarlo, abre ChatGPT con el texto `Resume URL_DEL_VIDEO` en el parámetro `q` y el vídeo en otra pestaña silenciada. Con el complemento incluido, ambas pestañas se abren dentro de un **grupo nuevo con el título del vídeo**.
 
 ## Instalación
 
@@ -16,11 +16,29 @@ La versión 1.1.0 añade los permisos `GM_openInTab` y `GM_audio`; si el gestor 
 
 Si el navegador muestra el código, cópialo en un script nuevo de tu gestor y guárdalo. También puedes usar la [copia en texto (.txt)](https://raw.githubusercontent.com/alexx-ftw/youtube-chatgpt/main/youtube-chatgpt.txt), con el mismo contenido y las mismas direcciones de actualización automática.
 
+## Abrir las dos pestañas dentro de un grupo
+
+La agrupación nativa requiere el complemento de la carpeta [`extension`](extension). Tampermonkey y Violentmonkey pueden abrir pestañas, pero no ofrecen una API para crear grupos.
+
+Instalación del complemento en Chrome, Brave o Edge compatibles:
+
+1. [Descarga el ZIP del repositorio](https://github.com/alexx-ftw/youtube-chatgpt/archive/refs/heads/main.zip) y descomprímelo en una carpeta que vayas a conservar.
+2. Abre la página de extensiones de tu navegador (`chrome://extensions`, `brave://extensions` o `edge://extensions`) y activa **Modo de desarrollador**.
+3. Pulsa **Cargar descomprimida** y selecciona la carpeta `youtube-chatgpt-main/extension`.
+4. Actualiza el userscript a la versión **1.2.0** o posterior y recarga YouTube.
+
+Al activar el botón, el complemento crea un grupo nuevo en la misma ventana con únicamente la pestaña del vídeo y la de ChatGPT. Usa el título del vídeo como nombre del grupo, silencia la pestaña de YouTube antes de cargarla y selecciona ChatGPT. Ctrl/Cmd + clic y clic central mantienen ambas pestañas en segundo plano.
+
+El complemento solo se ejecuta en YouTube y utiliza el permiso `tabGroups`. No necesita el permiso general de lectura de todas las pestañas ni ejecuta código descargado. Solo atiende una solicitud después de una activación real del botón.
+
+El userscript conserva sus actualizaciones automáticas. La copia del complemento cargada como extensión descomprimida se actualiza sustituyendo sus archivos y pulsando **Recargar** en la página de extensiones. Si el complemento no está instalado, el botón conserva la apertura de las dos pestañas sin agrupar.
+
 ## Funcionamiento
 
 - Abre `https://chatgpt.com/?q=Resume%20URL_DEL_VIDEO`, con todo el texto codificado correctamente.
 - Envía como valor de `q` el texto `Resume https://www.youtube.com/watch?v=ID`, usando la URL canónica del vídeo.
 - Abre también la página normal del vídeo en una pestaña de YouTube en segundo plano. ChatGPT queda seleccionado; con Ctrl/Cmd + clic o clic central, ambas pestañas se abren en segundo plano.
+- Con el complemento instalado, cada activación crea un grupo nuevo para el vídeo y su resumen. La pestaña de origen permanece donde estaba.
 - Silencia la nueva pestaña mediante `GM_audio` cuando el gestor ofrece esa API. Puedes volver a activar el sonido desde el menú de la pestaña del navegador.
 - Si no existe esa API o falla, silencia el reproductor. En ese caso puedes activar el sonido con el control de volumen de YouTube o la tecla **M**; el script deja de imponer el silencio al usar esos controles o al navegar a otro vídeo.
 - La marca de silenciado se consume al abrir el vídeo y se retira de la URL. El texto enviado a ChatGPT utiliza siempre la URL limpia.
@@ -45,9 +63,25 @@ Para publicar una actualización:
 2. Aumenta `@version`.
 3. Publica el cambio en `main`.
 
-Documentación: [Tampermonkey](https://www.tampermonkey.net/documentation.php#meta:updateURL) · [GM_audio](https://www.tampermonkey.net/documentation.php?locale=en&q=GM_audio) · [Violentmonkey](https://violentmonkey.github.io/api/metadata-block/)
+Documentación: [Tampermonkey](https://www.tampermonkey.net/documentation.php#meta:updateURL) · [GM_audio](https://www.tampermonkey.net/documentation.php?locale=en&q=GM_audio) · [Violentmonkey](https://violentmonkey.github.io/api/metadata-block/) · [Grupos nativos](https://developer.chrome.com/docs/extensions/reference/api/tabGroups)
+
+## Verificación del complemento
+
+Con Node.js, sin dependencias adicionales:
+
+```sh
+node --test tests/*.test.mjs
+```
+
+Las pruebas verifican los mensajes, la autorización por clic, el orden de silenciado y navegación, la agrupación y los casos de error con APIs simuladas. No sustituyen una prueba de la extensión instalada en un navegador real.
 
 ## Historial
+
+### 1.2.0
+
+- Complemento de navegador para abrir el vídeo y ChatGPT dentro de un grupo nativo nuevo, con el título del vídeo.
+- La apertura agrupada silencia la pestaña de YouTube antes de navegar a ella.
+- Integración con el userscript sin IDs de extensión fijos; mantiene la apertura anterior si el complemento no está instalado.
 
 ### 1.1.0
 
